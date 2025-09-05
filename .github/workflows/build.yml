@@ -27,13 +27,29 @@ jobs:
           sdkmanager --install "platforms;android-33" "build-tools;33.0.2" "platform-tools" "cmdline-tools;latest"
           yes | sdkmanager --licenses
 
-      # 👇 هذه الخطوة تفك المجلد app من ملف app.zip
-      - name: Unzip app.zip
+      # تجهيز المشروع من الملف المضغوط
+      - name: Prepare project from zip
         run: |
           rm -rf app
-          unzip app.zip -d app
-          ls -la
-          ls -la app
+          if [ -f AutoDrawApp.zip ]; then
+            unzip -q AutoDrawApp.zip
+            # إذا فكّ ملف فيه مجلد AutoDrawApp/ بداخله app/ ننقله للجذر
+            if [ -d AutoDrawApp/app ]; then
+              mv AutoDrawApp/app ./app
+              [ -f AutoDrawApp/build.gradle ] && cp AutoDrawApp/build.gradle .
+              [ -f AutoDrawApp/settings.gradle ] && cp AutoDrawApp/settings.gradle .
+            elif [ -d app ]; then
+              echo "Found app/ at repo root after unzip"
+            else
+              echo "Could not find app/ after unzip"; ls -la; exit 1
+            fi
+          elif [ -f app.zip ]; then
+            unzip -q app.zip -d app
+          else
+            echo "No AutoDrawApp.zip or app.zip found in repo root"; ls -la; exit 1
+          fi
+          echo "== Repo root =="; ls -la
+          echo "== app dir =="; ls -la app
 
       - name: Assemble Debug APK
         uses: gradle/gradle-build-action@v3
